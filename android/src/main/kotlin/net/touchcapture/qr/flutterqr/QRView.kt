@@ -38,6 +38,7 @@ class QRView(
     private var isPaused = false
     private var barcodeView: CustomFramingRectBarcodeView? = null
     private var unRegisterLifecycleCallback: UnRegisterLifecycleCallback? = null
+    private var permissionRequested = false
 
     init {
         QrShared.binding?.addRequestPermissionsResultListener(this)
@@ -46,11 +47,12 @@ class QRView(
 
         unRegisterLifecycleCallback = QrShared.activity?.registerLifecycleCallbacks(
             onPause = {
+                permissionRequested = false
                 if (!isPaused && hasCameraPermission) barcodeView?.pause()
 
             },
             onResume = {
-                if (!hasCameraPermission && !isRequestingPermission) checkAndRequestPermission()
+                if (!hasCameraPermission && !isRequestingPermission && !permissionRequested) checkAndRequestPermission()
                 else if (!isPaused && hasCameraPermission) barcodeView?.resume()
             }
         )
@@ -315,7 +317,9 @@ class QRView(
             grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED
 
         channel.invokeMethod(CHANNEL_METHOD_ON_PERMISSION_SET, permissionGranted)
-
+        
+        permissionRequested = true
+        
         return permissionGranted
     }
 
