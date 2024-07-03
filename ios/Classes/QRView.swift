@@ -43,6 +43,7 @@ public class QRView:NSObject,FlutterPlatformView {
         previewView = UIView(frame: frame)
         cameraFacing = MTBCamera.init(rawValue: UInt(Int(params["cameraFacing"] as! Double))) ?? MTBCamera.back
         channel = FlutterMethodChannel(name: "net.touchcapture.qr.flutterqr/qrview_\(id)", binaryMessenger: registrar.messenger())
+        super.init()
     }
     
     deinit {
@@ -122,10 +123,15 @@ public class QRView:NSObject,FlutterPlatformView {
         
     }
     
-    public func checkPermission(){
-        if(hasPermissionEnabled != true){
-            channel.invokeMethod("startScan", arguments: [])
-        }
+    public func checkPermission() {
+        MTBBarcodeScanner.requestCameraPermission(success: { [weak self] permissionGranted in
+            guard let self = self else { return }
+            if permissionGranted {
+                self.channel.invokeMethod("startScan", arguments: [])
+            } else {
+                self.channel.invokeMethod("onPermissionSet", arguments: permissionGranted)
+            }
+        })
     }
     
     func startScan(_ arguments: Array<Int>, _ result: @escaping FlutterResult) {
