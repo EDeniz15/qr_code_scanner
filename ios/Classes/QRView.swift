@@ -14,6 +14,7 @@ public class QRView:NSObject,FlutterPlatformView {
     var registrar: FlutterPluginRegistrar
     var channel: FlutterMethodChannel
     var cameraFacing: MTBCamera
+    var hasPermissionEnabled: Bool
     
     // Codabar, maxicode, rss14 & rssexpanded not supported. Replaced with qr.
     // UPCa uses ean13 object.
@@ -38,6 +39,7 @@ public class QRView:NSObject,FlutterPlatformView {
     
     public init(withFrame frame: CGRect, withRegistrar registrar: FlutterPluginRegistrar, withId id: Int64, params: Dictionary<String, Any>){
         self.registrar = registrar
+        hasPermissionEnabled = false
         previewView = UIView(frame: frame)
         cameraFacing = MTBCamera.init(rawValue: UInt(Int(params["cameraFacing"] as! Double))) ?? MTBCamera.back
         channel = FlutterMethodChannel(name: "net.touchcapture.qr.flutterqr/qrview_\(id)", binaryMessenger: registrar.messenger())
@@ -47,7 +49,7 @@ public class QRView:NSObject,FlutterPlatformView {
         scanner?.stopScanning()
     }
     
-    public func view() -> UIView {
+    public func view() -> UIView {  
         channel.setMethodCallHandler({
             [weak self] (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
             switch(call.method){
@@ -120,6 +122,12 @@ public class QRView:NSObject,FlutterPlatformView {
         
     }
     
+    public func checkPermission(){
+        if(hasPermissionEnabled != true){
+            channel.invokeMethod("startScan", arguments: [])
+        }
+    }
+    
     func startScan(_ arguments: Array<Int>, _ result: @escaping FlutterResult) {
         // Check for allowed barcodes
         var allowedBarcodeTypes: Array<AVMetadataObject.ObjectType> = []
@@ -130,7 +138,7 @@ public class QRView:NSObject,FlutterPlatformView {
             guard let self = self else { return }
 
             self.channel.invokeMethod("onPermissionSet", arguments: permissionGranted)
-
+            hasPermissionEnabled = permissionGranted
             if permissionGranted {
                 do {
                     try self.scanner?.startScanning(with: self.cameraFacing, resultBlock: { [weak self] codes in
